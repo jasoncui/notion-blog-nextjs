@@ -186,16 +186,37 @@ export default function Post({ page, blocks }) {
 
 export const getStaticPaths = async () => {
   const database = await getDatabase(databaseId);
+
   return {
-    paths: database.map((page) => ({ params: { id: page.id } })),
+    paths: database.map((page) => ({
+      params: {
+        id: page.properties?.Slug?.rich_text[0]?.text?.content || page.id,
+      },
+    })),
     fallback: true,
   };
 };
 
 export const getStaticProps = async (context) => {
+  // take in the slug
   const { id } = context.params;
-  const page = await getPage(id);
-  const blocks = await getBlocks(id);
+
+  let pageId;
+
+  const database = await getDatabase(databaseId);
+
+  console.log(database);
+
+  for (const page of database) {
+    if (page.properties?.Slug?.rich_text[0]?.text?.content === id) {
+      pageId = page.id;
+    } else {
+      pageId = id;
+    }
+  }
+
+  const page = await getPage(pageId);
+  const blocks = await getBlocks(pageId);
 
   // Retrieve block children for nested blocks (one level deep), for example toggle blocks
   // https://developers.notion.com/docs/working-with-page-content#reading-nested-blocks
