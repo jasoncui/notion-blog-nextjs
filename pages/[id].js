@@ -168,7 +168,7 @@ export default function Post({ page, blocks }) {
       </Head>
 
       <article className={styles.container}>
-        <h1 className={styles.name}>
+        <h1 className="mt-4">
           <Text text={page.properties.Name.title} />
         </h1>
         <section>
