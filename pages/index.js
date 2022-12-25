@@ -75,8 +75,6 @@ export const getStaticProps = async () => {
     }
   });
 
-  console.log("database: ", JSON.stringify(database, undefined, 2));
-
   return {
     props: {
       posts: publishedPosts,

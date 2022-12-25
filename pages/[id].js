@@ -201,17 +201,13 @@ export const getStaticProps = async (context) => {
   // take in the slug
   const { id } = context.params;
 
-  let pageId;
+  let pageId = id;
 
   const database = await getDatabase(databaseId);
-
-  console.log(database);
 
   for (const page of database) {
     if (page.properties?.Slug?.rich_text[0]?.text?.content === id) {
       pageId = page.id;
-    } else {
-      pageId = id;
     }
   }
 
