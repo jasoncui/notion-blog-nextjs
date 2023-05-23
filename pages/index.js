@@ -10,13 +10,13 @@ export default function Home({ posts }) {
   return (
     <div>
       <Head>
-        <title>Notion Next.js blog</title>
+        <title>Writings by Jason Cui</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <main className={styles.container}>
         <header className={styles.header}>
-          <h1>Next.js blog powered by Notion API</h1>
+          <h1>Writings by Jason Cui</h1>
           <p>
             This is an example of a Next.js blog with data fetched with Notions
             API. The data comes from{" "}

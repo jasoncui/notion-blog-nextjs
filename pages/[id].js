@@ -51,7 +51,7 @@ const renderBlock = (block) => {
   switch (type) {
     case "paragraph":
       return (
-        <p>
+        <p className="my-5 leading-7">
           <Text text={value.rich_text} />
         </p>
       );
@@ -69,7 +69,7 @@ const renderBlock = (block) => {
       );
     case "heading_3":
       return (
-        <h3>
+        <h3 className="font-bold text-xl mt-9 mb-2">
           <Text text={value.rich_text} />
         </h3>
       );
@@ -109,7 +109,7 @@ const renderBlock = (block) => {
       const caption = value.caption ? value.caption[0]?.plain_text : "";
       return (
         <figure>
-          <img src={src} alt={caption} />
+          <img src={src} alt={caption} className="my-5 rounded-lg" />
           {caption && <figcaption>{caption}</figcaption>}
         </figure>
       );
@@ -167,8 +167,8 @@ export default function Post({ page, blocks }) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <article className={styles.container}>
-        <h1 className="mt-4">
+      <article className="antialiased max-w-2xl mb-40 mx-4 mt-8 md:mt-20 lg:mt-32 lg:mx-auto">
+        <h1 className="font-extrabold text-3xl mt-4 mb-8">
           <Text text={page.properties.Name.title} />
         </h1>
         <section>
