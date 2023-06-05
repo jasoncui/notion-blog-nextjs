@@ -2,70 +2,51 @@ import Head from "next/head";
 import Link from "next/link";
 import { getDatabase } from "../lib/notion";
 import { Text } from "./[id].js";
-import styles from "./index.module.css";
 
 export const databaseId = process.env.NOTION_DATABASE_ID;
 
 export default function Home({ posts }) {
   return (
-    <div>
+    <div className="mt-8">
       <Head>
         <title>Writings by Jason Cui</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.container}>
-        <header className={styles.header}>
-          <h1>Writings by Jason Cui</h1>
-          <p>
-            This is an example of a Next.js blog with data fetched with Notions
-            API. The data comes from{" "}
-            <a href={`https://www.notion.so/${databaseId}`}>this table</a>. Get
-            the source code on{" "}
-            <a href="https://github.com/samuelkraft/notion-blog-nextjs">
-              Github
-            </a>{" "}
-            or read{" "}
-            <a href="https://samuelkraft.com/blog/building-a-notion-blog-with-public-api">
-              my blogpost
-            </a>{" "}
-            on building your own.
-          </p>
+      <main className="antialiased max-w-2xl mb-40 mt-8 md:mt-20 lg:mt-32 mx-auto px-4">
+        <header>
+          <h1 className="font-extrabold text-2xl mt-4 mb-4">
+            Writings by Jason Cui
+          </h1>
         </header>
-
-        <h2 className={styles.heading}>All Posts</h2>
-        <ol className={styles.posts}>
+        <hr className="my-8" />
+        <ol>
           {posts.map((post) => {
-            console.log("post: ", post);
-            const date = new Date(post.last_edited_time).toLocaleString(
-              "en-US",
-              {
-                month: "short",
-                day: "2-digit",
-                year: "numeric",
-              }
-            );
-            return (
-              <li key={post.id} className={styles.post}>
-                <h3 className={styles.postTitle}>
-                  <Link
-                    href={`/${
-                      post.properties?.Slug?.rich_text[0]?.text?.content ||
-                      post.id
-                    }`}
-                  >
-                    <Text text={post.properties.Name.title} />
-                  </Link>
-                </h3>
+            console.log(post);
+            const date = new Date(
+              post.properties?.Published?.date?.start
+            ).toLocaleString("en-US", {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            });
 
-                <p className={styles.postDescription}>{date}</p>
+            return (
+              <li key={post.id} className="mb-4">
                 <Link
                   href={`/${
                     post.properties?.Slug?.rich_text[0]?.text?.content ||
                     post.id
                   }`}
+                  className="text-black"
                 >
-                  Read post →
+                  <h3 className="mb-1">
+                    {post.properties.Name.title[0].plain_text}
+                  </h3>
+
+                  <div className="font-mono text-sm text-neutral-500 tracking-tighter">
+                    {date}
+                  </div>
                 </Link>
               </li>
             );
@@ -87,6 +68,8 @@ export const getStaticProps = async () => {
       publishedPosts.push(p);
     }
   });
+
+  const sortedPosts = publishedPosts.sort((a, b) => {});
 
   return {
     props: {

@@ -160,6 +160,19 @@ export default function Post({ page, blocks }) {
   if (!page || !blocks) {
     return <div />;
   }
+
+  console.log("page: ", page?.created_time);
+
+  const createdTime = page?.created_time;
+
+  const createdDate = new Date(createdTime);
+
+  const formattedDate = createdDate
+    .toLocaleDateString("en-US", {
+      timeZone: "UTC",
+    })
+    .replace(/\//g, "-");
+
   return (
     <div>
       <Head>
@@ -167,10 +180,11 @@ export default function Post({ page, blocks }) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <article className="antialiased max-w-2xl mb-40 mx-4 mt-8 md:mt-20 lg:mt-32 lg:mx-auto">
-        <h1 className="font-extrabold text-3xl mt-4 mb-8">
+      <article className="antialiased max-w-2xl mb-40 mt-8 md:mt-20 lg:mt-32 mx-auto px-4">
+        <h1 className="font-extrabold text-3xl mt-4 mb-4">
           <Text text={page.properties.Name.title} />
         </h1>
+        <div>{formattedDate}</div>
         <section>
           {blocks.map((block) => (
             <Fragment key={block.id}>{renderBlock(block)}</Fragment>
