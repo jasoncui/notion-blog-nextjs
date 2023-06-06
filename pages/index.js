@@ -9,14 +9,14 @@ export default function Home({ posts }) {
   return (
     <div className="mt-8">
       <Head>
-        <title>Writings by Jason Cui</title>
+        <title>Blog by Jason Cui</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <main className="antialiased max-w-2xl mb-40 mt-8 md:mt-20 lg:mt-32 mx-auto px-4">
         <header>
           <h1 className="font-extrabold text-2xl mt-4 mb-4">
-            Writings by Jason Cui
+            Blog by Jason Cui
           </h1>
         </header>
         <hr className="my-8" />
