@@ -181,10 +181,12 @@ export default function Post({ page, blocks }) {
       </Head>
 
       <article className="antialiased max-w-2xl mb-40 mt-8 md:mt-20 lg:mt-32 mx-auto px-4">
-        <h1 className="font-extrabold text-3xl mt-4 mb-4">
-          <Text text={page.properties.Name.title} />
-        </h1>
-        <div>{formattedDate}</div>
+        <div className="mb-4">
+          <h1 className="font-extrabold text-3xl mt-4 mb-4">
+            <Text text={page.properties.Name.title} />
+          </h1>
+          <div className="font-mono tracking-tighter">{formattedDate}</div>
+        </div>
         <section>
           {blocks.map((block) => (
             <Fragment key={block.id}>{renderBlock(block)}</Fragment>
