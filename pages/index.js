@@ -22,7 +22,6 @@ export default function Home({ posts }) {
         <hr className="my-8" />
         <ol>
           {posts.map((post) => {
-            console.log(post);
             const date = new Date(
               post.properties?.Published?.date?.start
             ).toLocaleString("en-US", {
@@ -69,11 +68,19 @@ export const getStaticProps = async () => {
     }
   });
 
-  const sortedPosts = publishedPosts.sort((a, b) => {});
+  const sortedPosts = publishedPosts.sort((a, b) => {
+    const dateA = new Date(a.properties?.Published?.date?.start);
+
+    const dateB = new Date(b.properties?.Published?.date?.start);
+
+    console.log("dateA: ", dateA, dateB);
+
+    return dateB - dateA;
+  });
 
   return {
     props: {
-      posts: publishedPosts,
+      posts: sortedPosts,
     },
     revalidate: 1,
   };

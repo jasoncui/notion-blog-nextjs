@@ -4,6 +4,7 @@ import { getDatabase, getPage, getBlocks } from "../lib/notion";
 import Link from "next/link";
 import { databaseId } from "./index.js";
 import styles from "./post.module.css";
+import Image from "next/image";
 
 export const Text = ({ text }) => {
   if (!text) {
@@ -107,12 +108,16 @@ const renderBlock = (block) => {
       const src =
         value.type === "external" ? value.external.url : value.file.url;
       const caption = value.caption ? value.caption[0]?.plain_text : "";
-      return (
-        <figure>
-          <img src={src} alt={caption} className="my-5 rounded-lg" />
-          {caption && <figcaption>{caption}</figcaption>}
-        </figure>
-      );
+      return null;
+      // <figure className="relative">
+      //   <Image
+      //     fill
+      //     src={src}
+      //     alt={caption}
+      //     className="my-5 rounded-lg object-cover"
+      //   />
+      //   {caption && <figcaption>{caption}</figcaption>}
+      // </figure>
     case "divider":
       return <hr key={id} />;
     case "quote":
