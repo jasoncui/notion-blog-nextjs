@@ -109,15 +109,15 @@ const renderBlock = (block) => {
         value.type === "external" ? value.external.url : value.file.url;
       const caption = value.caption ? value.caption[0]?.plain_text : "";
       return null;
-      // <figure className="relative">
-      //   <Image
-      //     fill
-      //     src={src}
-      //     alt={caption}
-      //     className="my-5 rounded-lg object-cover"
-      //   />
-      //   {caption && <figcaption>{caption}</figcaption>}
-      // </figure>
+    // <figure className="relative">
+    //   <Image
+    //     fill
+    //     src={src}
+    //     alt={caption}
+    //     className="my-5 rounded-lg object-cover"
+    //   />
+    //   {caption && <figcaption>{caption}</figcaption>}
+    // </figure>
     case "divider":
       return <hr key={id} />;
     case "quote":
@@ -166,8 +166,6 @@ export default function Post({ page, blocks }) {
     return <div />;
   }
 
-  console.log("page: ", page?.created_time);
-
   const createdTime = page?.created_time;
 
   const createdDate = new Date(createdTime);
@@ -183,6 +181,20 @@ export default function Post({ page, blocks }) {
       <Head>
         <title>{page.properties.Name.title[0].plain_text}</title>
         <link rel="icon" href="/favicon.ico" />
+        <meta
+          name="description"
+          content={page.properties.Name.title[0].plain_text}
+          key="desc"
+        />
+        <meta property="og:title" content="Social Title for Cool Page" />
+        <meta
+          property="og:description"
+          content="And a social description for our cool page"
+        />
+        <meta
+          property="og:image"
+          content="https://example.com/images/cool-page.jpg"
+        />
       </Head>
 
       <article className="antialiased max-w-2xl mb-40 mt-8 md:mt-20 lg:mt-32 mx-auto px-4">
