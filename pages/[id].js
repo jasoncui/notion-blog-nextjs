@@ -181,16 +181,16 @@ export default function Post({ page, blocks }) {
       <Head>
         <title>{page.properties.Name.title[0].plain_text}</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta
+        {/* <meta
           name="description"
           content={page.properties.Name.title[0].plain_text}
           key="desc"
-        />
-        <meta property="og:title" content="Social Title for Cool Page" />
-        <meta
+        /> */}
+        <meta property="og:title" content={page.properties.Name.title[0].plain_text}} />
+        {/* <meta
           property="og:description"
           content="And a social description for our cool page"
-        />
+        /> */}
         <meta
           property="og:image"
           content="https://example.com/images/cool-page.jpg"
