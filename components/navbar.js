@@ -13,7 +13,7 @@ const NavBar = () => {
           </div>
           <div className="hidden md:block">
             <div className="ml-4 flex items-center md:ml-auto space-x-2">
-              <a href="/" target="_blank" rel="noopener noreferrer">
+              <a href="/">
                 <Home className="text-gray-400 hover:text-gray-600 hover:cursor-pointer h-5 w-5" />
               </a>
               <a
