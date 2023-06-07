@@ -186,11 +186,15 @@ export default function Post({ page, blocks }) {
           content={page.properties.Name.title[0].plain_text}
           key="desc"
         /> */}
-        <meta property="og:title" content={page.properties.Name.title[0].plain_text}} />
+        <meta
+          property="og:title"
+          content={page.properties.Name.title[0].plain_text}
+        />
         {/* <meta
           property="og:description"
           content="And a social description for our cool page"
         /> */}
+        <meta property="og:site_name" content="Jason Cui" />
         <meta
           property="og:image"
           content="https://example.com/images/cool-page.jpg"
