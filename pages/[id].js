@@ -195,10 +195,7 @@ export default function Post({ page, blocks }) {
           content="And a social description for our cool page"
         /> */}
         <meta property="og:site_name" content="Jason Cui" />
-        <meta
-          property="og:image"
-          content="https://example.com/images/cool-page.jpg"
-        />
+        <meta property="og:image" content="/images/future-city.webp" />
       </Head>
 
       <div className="max-w-2xl mx-auto px-4">

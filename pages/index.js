@@ -18,10 +18,7 @@ export default function Home({ posts }) {
           content="Hi I'm Jason — I currently live in San Francisco, CA.  am cofounder and co-CEO at Jemi, where I work with a super talented team."
         />
         <meta property="og:url" content="https://jasonscui.com" />
-        <meta
-          property="og:image"
-          content="https://www.vinayiyengar.com/wp-content/uploads/2018/01/cropped-venn-diagram-1.png"
-        />
+        <meta property="og:image" content="/images/future-city.webp" />
       </Head>
 
       <main className="max-w-2xl mx-auto">
