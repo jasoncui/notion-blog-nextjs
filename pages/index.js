@@ -1,7 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
 import { getDatabase } from "../lib/notion";
-import { Text } from "./[id].js";
 
 export const databaseId = process.env.NOTION_DATABASE_ID;
 
@@ -9,17 +8,41 @@ export default function Home({ posts }) {
   return (
     <div className="mt-8">
       <Head>
-        <title>Blog by Jason Cui</title>
+        <title>Jason Cui</title>
         <link rel="icon" href="/favicon.ico" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Jason Cui" />
+        <meta property="og:description" content="" />
+        <meta property="og:url" content="https://jasonscui.com" />
+        <meta
+          property="og:image"
+          content="https://www.vinayiyengar.com/wp-content/uploads/2018/01/cropped-venn-diagram-1.png"
+        />
       </Head>
 
       <main className="antialiased max-w-2xl mb-40 mt-8 md:mt-20 lg:mt-32 mx-auto px-4">
         <header>
-          <h1 className="font-extrabold text-2xl mt-4 mb-4">
-            Blog by Jason Cui
-          </h1>
+          <h1 className="font-extrabold text-2xl mt-4 mb-4">Jason Cui</h1>
+          <p className="my-5 leading-7">
+            Hi I'm Jason — I currently live in San Francisco, CA.
+          </p>
+          <p className="my-5 leading-7">
+            I am cofounder and co-CEO at{" "}
+            <a href="https://jemi.so" target="_blank">
+              Jemi
+            </a>
+            , where I work with a super talented team. We build beautiful online
+            stores and websites for entrepreneurs and creatives in minutes. We
+            started the company in 2020 during the pandemic, and have since
+            scaled to serving users around the globe.
+          </p>
+          <p className="my-5 leading-7">
+            I'm passionate about startups, investing, electronic music, and
+            community.
+          </p>
         </header>
         <hr className="my-8" />
+        <h2 className="font-bold text-xl mt-4 mb-4">Writing</h2>
         <ol>
           {posts.map((post) => {
             const date = new Date(
@@ -31,7 +54,7 @@ export default function Home({ posts }) {
             });
 
             return (
-              <li key={post.id} className="mb-4">
+              <li key={post.id} className="mb-8">
                 <Link
                   href={`/${
                     post.properties?.Slug?.rich_text[0]?.text?.content ||
@@ -72,8 +95,6 @@ export const getStaticProps = async () => {
     const dateA = new Date(a.properties?.Published?.date?.start);
 
     const dateB = new Date(b.properties?.Published?.date?.start);
-
-    console.log("dateA: ", dateA, dateB);
 
     return dateB - dateA;
   });
