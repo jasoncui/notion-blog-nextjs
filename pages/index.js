@@ -13,7 +13,10 @@ export default function Home({ posts }) {
         <link rel="icon" href="/favicon.ico" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Jason Cui" />
-        <meta property="og:description" content="" />
+        <meta
+          property="og:description"
+          content="Hi I'm Jason — I currently live in San Francisco, CA.  am cofounder and co-CEO at Jemi, where I work with a super talented team."
+        />
         <meta property="og:url" content="https://jasonscui.com" />
         <meta
           property="og:image"
