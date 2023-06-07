@@ -15,7 +15,7 @@ export default function Home({ posts }) {
         <meta property="og:title" content="Jason Cui" />
         <meta
           property="og:description"
-          content="Hi I'm Jason — I currently live in San Francisco, CA.  am cofounder and co-CEO at Jemi, where I work with a super talented team."
+          content="Hi I'm Jason — I currently live in San Francisco, CA. I am cofounder and co-CEO at Jemi, where I work with a super talented team."
         />
         <meta property="og:url" content="https://jasonscui.com" />
         <meta property="og:image" content="/images/future-city.webp" />
