@@ -4,7 +4,7 @@ import { getDatabase, getPage, getBlocks } from "../lib/notion";
 import Link from "next/link";
 import { databaseId } from "./index.js";
 import styles from "./post.module.css";
-import Image from "next/image";
+import NavBar from "../components/navbar";
 
 export const Text = ({ text }) => {
   if (!text) {
@@ -201,24 +201,29 @@ export default function Post({ page, blocks }) {
         />
       </Head>
 
-      <article className="antialiased max-w-2xl mb-40 mt-8 md:mt-20 lg:mt-32 mx-auto px-4">
-        <div className="mb-4">
-          <h1 className="font-extrabold text-3xl mt-4 mb-4">
-            <Text text={page.properties.Name.title} />
-          </h1>
-          <div className="font-mono text-neutral-500 tracking-tighter">
-            {formattedDate}
+      <div className="max-w-2xl mx-auto px-4">
+        <NavBar />
+        <article className="antialiased  mb-40 mt-8 md:mt-20 lg:mt-32">
+          <div className="mb-12">
+            <h1 className="font-extrabold text-3xl mt-4 mb-4">
+              <Text text={page.properties.Name.title} />
+            </h1>
+            <div className="font-mono text-neutral-500 tracking-tighter">
+              {formattedDate}
+            </div>
           </div>
-        </div>
-        <section>
-          {blocks.map((block) => (
-            <Fragment key={block.id}>{renderBlock(block)}</Fragment>
-          ))}
-          <Link href="/" className={styles.back}>
-            ← Go home
-          </Link>
-        </section>
-      </article>
+          <section>
+            {blocks.map((block) => (
+              <Fragment key={block.id}>{renderBlock(block)}</Fragment>
+            ))}
+            <div className="my-8">
+              <p>
+                <Link href="/">← Go home</Link>
+              </p>
+            </div>
+          </section>
+        </article>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+
 p > a {
   text-decoration: underline;
   font-weight: 500;
