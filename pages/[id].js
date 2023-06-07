@@ -166,15 +166,15 @@ export default function Post({ page, blocks }) {
     return <div />;
   }
 
-  const createdTime = page?.created_time;
+  const createdTime = page.properties?.Published?.date?.start;
 
   const createdDate = new Date(createdTime);
 
-  const formattedDate = createdDate
-    .toLocaleDateString("en-US", {
-      timeZone: "UTC",
-    })
-    .replace(/\//g, "-");
+  const formattedDate = createdDate.toLocaleString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
 
   return (
     <div>
@@ -206,7 +206,9 @@ export default function Post({ page, blocks }) {
           <h1 className="font-extrabold text-3xl mt-4 mb-4">
             <Text text={page.properties.Name.title} />
           </h1>
-          <div className="font-mono tracking-tighter">{formattedDate}</div>
+          <div className="font-mono text-neutral-500 tracking-tighter">
+            {formattedDate}
+          </div>
         </div>
         <section>
           {blocks.map((block) => (
