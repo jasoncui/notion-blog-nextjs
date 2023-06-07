@@ -2,8 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-
 p > a {
+  text-decoration: underline;
+  font-weight: 500;
+  text-decoration-color: #a3a3a3;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 2px;
+}
+
+span > a {
   text-decoration: underline;
   font-weight: 500;
   text-decoration-color: #a3a3a3;
