@@ -8,10 +8,12 @@ const NavBar = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <div>
-              <p className="text-lg font-semibold">Jason Cui</p>
+              <a className="text-lg font-semibold" href="/">
+                Jason Cui
+              </a>
             </div>
           </div>
-          <div className="hidden md:block">
+          <div className="">
             <div className="ml-4 flex items-center md:ml-auto space-x-2">
               <a href="/">
                 <Home className="text-gray-400 hover:text-gray-600 hover:cursor-pointer h-5 w-5" />
