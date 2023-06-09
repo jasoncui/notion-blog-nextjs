@@ -262,8 +262,17 @@ export const getStaticProps = async (context) => {
     }
   }
 
-  const page = await getPage(pageId);
-  const blocks = await getBlocks(pageId);
+  let page, blocks;
+
+  try {
+    page = await getPage(pageId);
+    blocks = await getBlocks(pageId);
+  } catch (e) {
+    console.log("reached error");
+    return {
+      notFound: true,
+    };
+  }
 
   // Retrieve block children for nested blocks (one level deep), for example toggle blocks
   // https://developers.notion.com/docs/working-with-page-content#reading-nested-blocks
