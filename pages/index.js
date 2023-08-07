@@ -39,7 +39,7 @@ export default function Home({ posts }) {
               have since scaled to serving users around the globe.
             </p>
             <p className="my-5 leading-7">
-              I'm passionate about startups, investing, jiu jitsu, electronic
+              I'm passionate about startups, technology, investing, jiu jitsu, electronic
               music, and community.
             </p>
           </header>
