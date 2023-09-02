@@ -128,7 +128,7 @@ const renderBlock = (block) => {
       return <hr key={id} />;
     case "quote":
       return (
-        <div class="bg-gray-100 border-l-4 border-gray-500 text-gray-700 p-4 my-4 rounded">
+        <div class="bg-gray-100 border-l-4 border-gray-500 text-gray-700 p-4 my-4 rounded italic">
           <blockquote key={id}>{value.rich_text[0].plain_text}</blockquote>
         </div>
       );
