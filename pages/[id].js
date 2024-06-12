@@ -111,19 +111,21 @@ const renderBlock = (block) => {
     case "child_page":
       return <p>{value.title}</p>;
     case "image":
+      if (value.type !== "external") return null;
       const src =
         value.type === "external" ? value.external.url : value.file.url;
       const caption = value.caption ? value.caption[0]?.plain_text : "";
-      return null;
-    // <figure className="relative">
-    //   <Image
-    //     fill
-    //     src={src}
-    //     alt={caption}
-    //     className="my-5 rounded-lg object-cover"
-    //   />
-    //   {caption && <figcaption>{caption}</figcaption>}
-    // </figure>
+      return (
+        <figure className="relative">
+          <img
+            fill
+            src={src}
+            alt={caption}
+            className="my-5 rounded-lg object-cover"
+          />
+          {caption && <figcaption>{caption}</figcaption>}
+        </figure>
+      );
     case "divider":
       return <hr key={id} />;
     case "quote":
