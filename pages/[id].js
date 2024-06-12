@@ -188,6 +188,8 @@ export default function Post({ page, blocks }) {
     year: "numeric",
   });
 
+  const status = page.properties?.Status?.select?.name;
+
   return (
     <div>
       <Head>
@@ -214,6 +216,17 @@ export default function Post({ page, blocks }) {
         <NavBar />
         <article className="antialiased  mb-40 mt-8 md:mt-20 lg:mt-32">
           <div className="mb-12">
+            {status === "Draft" ? (
+              <div
+                className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4"
+                role="alert"
+              >
+                <p className="font-bold">Draft</p>
+                <p>
+                  This post is currently a draft and has not been published.
+                </p>
+              </div>
+            ) : null}
             <h1 className="font-extrabold text-3xl mt-4 mb-4">
               <Text text={page.properties.Name.title} />
             </h1>
@@ -297,6 +310,8 @@ export const getStaticProps = async (context) => {
     }
     return block;
   });
+
+  console.log(JSON.stringify(page, undefined, 2));
 
   return {
     props: {
