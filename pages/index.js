@@ -29,18 +29,25 @@ export default function Home({ posts }) {
               Hi I'm Jason — I currently live in San Francisco, CA.
             </p>
             <p className="my-5 leading-7">
-              I am cofounder and co-CEO at{" "}
+              I was cofounder and co-CEO at{" "}
               <a href="https://jemi.so" target="_blank">
                 Jemi
               </a>
-              , where I work with a super talented team. We build beautiful
-              online stores and websites for entrepreneurs and creatives in
-              minutes. We started the company in 2020 during the pandemic, and
-              have since scaled to serving users around the globe.
+              , where we built beautiful online stores and websites for
+              entrepreneurs and creatives in minutes. We started the company in
+              2020 during the pandemic, and have since scaled to serving users
+              around the globe. In 2023, we were{" "}
+              <a
+                href="https://www.tubefilter.com/2023/11/30/brat-tv-monetization-acquires-jemi-creator-stores-ecommerce-platform/"
+                target="_blank"
+              >
+                acquired
+              </a>{" "}
+              by Brat TV.
             </p>
             <p className="my-5 leading-7">
-              I'm passionate about startups, technology, investing, jiu jitsu, electronic
-              music, and community.
+              I'm passionate about startups, technology, investing, jiu jitsu,
+              electronic music, and community.
             </p>
           </header>
           <hr className="my-8" />
