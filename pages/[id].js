@@ -11,13 +11,20 @@ export const Text = ({ text }) => {
   if (!text) {
     return null;
   }
-  return text.map((value) => {
+  return text.map((value, index) => {
+    // Handle cases where value might be malformed
+    if (!value || !value.annotations || !value.text) {
+      return null;
+    }
+    
     const {
       annotations: { bold, code, color, italic, strikethrough, underline },
-      text,
+      text: textContent,
     } = value;
+    
     return (
       <span
+        key={index}
         className={[
           bold ? styles.bold : "",
           code ? styles.code : "",
@@ -27,16 +34,16 @@ export const Text = ({ text }) => {
         ].join(" ")}
         style={color !== "default" ? { color } : {}}
       >
-        {text.link ? (
-          <a target="_blank" rel="noopener noreferrer" href={text.link.url}>
-            {text.content}
+        {textContent?.link ? (
+          <a target="_blank" rel="noopener noreferrer" href={textContent.link.url}>
+            {textContent.content}
           </a>
         ) : (
-          text.content
+          textContent?.content || ""
         )}
       </span>
     );
-  });
+  }).filter(Boolean); // Remove null values
 };
 
 const renderNestedList = (block) => {
