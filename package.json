@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "clean-images": "node -e \"import('./lib/imageUtils.js').then(m => m.cleanupOldImages(30))\""
   },
   "dependencies": {
     "@notionhq/client": "^2.2.1",
