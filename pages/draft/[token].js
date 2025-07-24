@@ -32,8 +32,8 @@ export const Text = ({ text, blockId, onTextSelect }) => {
           start: range.startOffset,
           end: range.endOffset,
           bounds: {
-            top: selectionRect.top - blockRect.top,
-            left: selectionRect.left - blockRect.left,
+            top: selectionRect.top,
+            left: selectionRect.left,
             width: selectionRect.width,
             height: selectionRect.height
           }
@@ -76,7 +76,7 @@ export const Text = ({ text, blockId, onTextSelect }) => {
 };
 
 // Render nested list helper
-const renderNestedList = (block, onTextSelect) => {
+const renderNestedList = (block, onTextSelect, highlightedCommentId) => {
   const { type } = block;
   const value = block[type];
   if (!value) return null;
@@ -84,9 +84,9 @@ const renderNestedList = (block, onTextSelect) => {
   const isNumberedList = value.children[0].type === "numbered_list_item";
 
   if (isNumberedList) {
-    return <ol>{value.children.map((block) => renderBlock(block, onTextSelect))}</ol>;
+    return <ol>{value.children.map((block) => renderBlock(block, onTextSelect, [], highlightedCommentId))}</ol>;
   }
-  return <ul>{value.children.map((block) => renderBlock(block, onTextSelect))}</ul>;
+  return <ul>{value.children.map((block) => renderBlock(block, onTextSelect, [], highlightedCommentId))}</ul>;
 };
 
 // Highlighted text component
@@ -139,8 +139,13 @@ const HighlightedText = ({ text, highlights }) => {
         {segments.map((segment, index) => (
           <span
             key={index}
-            className={segment.highlighted ? 'bg-yellow-200 cursor-pointer hover:bg-yellow-300' : ''}
-            style={segment.highlighted ? { backgroundColor: `${segment.color}20` } : {}}
+            className={segment.highlighted ? 'cursor-pointer transition-colors' : ''}
+            style={segment.highlighted ? { 
+              backgroundColor: segment.isActive ? `${segment.color}60` : `${segment.color}30`,
+              padding: '2px 0',
+              borderRadius: '2px',
+              animation: segment.isActive ? 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
+            } : {}}
             data-comment-id={segment.commentId}
           >
             {segment.text}
@@ -152,7 +157,7 @@ const HighlightedText = ({ text, highlights }) => {
 };
 
 // Render block function with selection support
-const renderBlock = (block, onTextSelect, comments = []) => {
+const renderBlock = (block, onTextSelect, comments = [], highlightedCommentId = null) => {
   const { type, id } = block;
   const value = block[type];
   const blockComments = comments.filter(c => c.block_id === id);
@@ -163,7 +168,7 @@ const renderBlock = (block, onTextSelect, comments = []) => {
         return (
           <p className="my-5 leading-7" data-block-id={id}>
             {blockComments.length > 0 ? (
-              <HighlightedText text={value.rich_text} highlights={blockComments} />
+              <HighlightedText text={value.rich_text} highlights={blockComments} highlightedCommentId={highlightedCommentId} />
             ) : (
               <Text text={value.rich_text} blockId={id} onTextSelect={onTextSelect} />
             )}
@@ -192,7 +197,7 @@ const renderBlock = (block, onTextSelect, comments = []) => {
         return (
           <li className="pl-4 my-2" data-block-id={id}>
             <Text text={value.rich_text} blockId={id} onTextSelect={onTextSelect} />
-            {!!value.children && renderNestedList(block, onTextSelect)}
+            {!!value.children && renderNestedList(block, onTextSelect, highlightedCommentId)}
           </li>
         );
       case "image":
@@ -218,7 +223,7 @@ const renderBlock = (block, onTextSelect, comments = []) => {
 };
 
 // Comment thread component
-const CommentThread = ({ comment, replies, onReply, currentUser }) => {
+const CommentThread = ({ comment, replies, onReply, currentUser, onCommentClick, isHighlighted }) => {
   const [replyText, setReplyText] = useState('');
   const [showReplyForm, setShowReplyForm] = useState(false);
 
@@ -232,8 +237,8 @@ const CommentThread = ({ comment, replies, onReply, currentUser }) => {
   };
 
   return (
-    <div className="border-l-2 border-gray-200 pl-3 mb-4">
-      <div className="bg-white rounded-lg p-3 shadow-sm">
+    <div className={`border-l-2 ${isHighlighted ? 'border-blue-500' : 'border-gray-200'} pl-3 mb-4 transition-colors`}>
+      <div className={`bg-white rounded-lg p-3 shadow-sm ${isHighlighted ? 'ring-2 ring-blue-500' : ''} transition-all`}>
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
             <div 
@@ -259,7 +264,10 @@ const CommentThread = ({ comment, replies, onReply, currentUser }) => {
         <div className="text-sm text-gray-700 mb-2">{comment.content}</div>
         
         {comment.selected_text && (
-          <div className="text-xs text-gray-500 italic mb-2 p-2 bg-gray-50 rounded">
+          <div 
+            className="text-xs text-gray-500 italic mb-2 p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors"
+            onClick={() => onCommentClick(comment)}
+          >
             "{comment.selected_text}"
           </div>
         )}
@@ -280,6 +288,8 @@ const CommentThread = ({ comment, replies, onReply, currentUser }) => {
             replies={[]} 
             onReply={onReply}
             currentUser={currentUser}
+            onCommentClick={onCommentClick}
+            isHighlighted={false}
           />
         </div>
       ))}
@@ -327,6 +337,8 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
   const [selectedText, setSelectedText] = useState(null)
   const [commentText, setCommentText] = useState('')
   const [showUserModal, setShowUserModal] = useState(true)
+  const [highlightedCommentId, setHighlightedCommentId] = useState(null)
+  const [commentPopupPosition, setCommentPopupPosition] = useState(null)
 
   useEffect(() => {
     if (token && slug && currentUser.name) {
@@ -338,6 +350,24 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
       supabase.removeAllChannels()
     }
   }, [token, slug, currentUser.name])
+
+  useEffect(() => {
+    // Handle clicks outside the comment popup
+    const handleClickOutside = (e) => {
+      if (selectedText && commentPopupPosition) {
+        const popup = e.target.closest('.fixed.z-50')
+        const selection = window.getSelection()
+        if (!popup && selection.toString().trim() === '') {
+          setSelectedText(null)
+          setCommentText('')
+          setCommentPopupPosition(null)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [selectedText, commentPopupPosition])
 
   if (error) {
     return (
@@ -414,6 +444,24 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
 
   const handleTextSelect = (selection) => {
     setSelectedText(selection)
+    
+    // Calculate popup position based on selection
+    if (selection && selection.bounds) {
+      const mainContent = document.querySelector('main')
+      const mainRect = mainContent.getBoundingClientRect()
+      
+      // Position the popup near the selection
+      setCommentPopupPosition({
+        top: selection.bounds.top + window.scrollY + selection.bounds.height + 10,
+        left: Math.max(
+          20,
+          Math.min(
+            selection.bounds.left + (selection.bounds.width / 2) - 200,
+            window.innerWidth - 420
+          )
+        )
+      })
+    }
   }
 
   const handleAddComment = async (e) => {
@@ -443,6 +491,7 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
       if (response.ok) {
         setCommentText('')
         setSelectedText(null)
+        setCommentPopupPosition(null)
         window.getSelection().removeAllRanges()
       }
     } catch (error) {
@@ -476,6 +525,21 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
     }
   }
 
+  const handleCommentClick = (comment) => {
+    if (comment.block_id && comment.selection_start !== null) {
+      // Find the block element
+      const blockElement = document.querySelector(`[data-block-id="${comment.block_id}"]`)
+      if (blockElement) {
+        // Scroll to the block
+        blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        
+        // Highlight the comment for visual feedback
+        setHighlightedCommentId(comment.id)
+        setTimeout(() => setHighlightedCommentId(null), 2000)
+      }
+    }
+  }
+
   // Group comments by thread
   const commentThreads = comments.filter(c => !c.parent_comment_id)
   const getReplies = (commentId) => comments.filter(c => c.parent_comment_id === commentId)
@@ -485,6 +549,19 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
       <Head>
         <title>{post.properties.Name.title[0]?.plain_text || 'Draft Post'}</title>
         <meta name="robots" content="noindex, nofollow" />
+        <style jsx global>{`
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.5;
+            }
+          }
+          .animate-pulse {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          }
+        `}</style>
       </Head>
 
       {/* User setup modal */}
@@ -547,7 +624,7 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
 
             {/* Post content */}
             <article className="prose max-w-none">
-              {blocks.map((block) => renderBlock(block, handleTextSelect, comments))}
+              {blocks.map((block) => renderBlock(block, handleTextSelect, comments, highlightedCommentId))}
             </article>
           </div>
         </main>
@@ -557,41 +634,6 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
           <div className="p-4">
             <h2 className="text-lg font-semibold mb-4">Comments</h2>
 
-            {/* Add comment form when text is selected */}
-            {selectedText && (
-              <form onSubmit={handleAddComment} className="mb-6 p-4 bg-white rounded-lg shadow">
-                <div className="text-sm text-gray-600 mb-2">
-                  Commenting on: <span className="italic">"{selectedText.selectedText}"</span>
-                </div>
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="w-full p-2 border rounded resize-none"
-                  rows={3}
-                  autoFocus
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                  >
-                    Comment
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedText(null)
-                      setCommentText('')
-                      window.getSelection().removeAllRanges()
-                    }}
-                    className="px-4 py-2 border text-sm rounded hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
 
             {/* Comments list */}
             {loading ? (
@@ -607,6 +649,8 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
                     replies={getReplies(comment.id)}
                     onReply={handleReply}
                     currentUser={currentUser}
+                    onCommentClick={handleCommentClick}
+                    isHighlighted={comment.id === highlightedCommentId}
                   />
                 ))}
               </div>
@@ -614,6 +658,51 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
           </div>
         </aside>
       </div>
+      
+      {/* Inline comment popup */}
+      {selectedText && commentPopupPosition && (
+        <div 
+          className="fixed z-50 bg-white rounded-lg shadow-xl border p-4 w-96"
+          style={{
+            top: `${commentPopupPosition.top}px`,
+            left: `${commentPopupPosition.left}px`
+          }}
+        >
+          <form onSubmit={handleAddComment}>
+            <div className="text-sm text-gray-600 mb-2">
+              Commenting on: <span className="italic font-medium">"{selectedText.selectedText}"</span>
+            </div>
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Add a comment..."
+              className="w-full p-2 border rounded resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+              autoFocus
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+              >
+                Comment
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedText(null)
+                  setCommentText('')
+                  setCommentPopupPosition(null)
+                  window.getSelection().removeAllRanges()
+                }}
+                className="px-4 py-2 border text-sm rounded hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
