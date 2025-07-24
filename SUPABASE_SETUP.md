@@ -40,9 +40,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...your-anon-key
 ## Database Schema
 
 ```sql
--- Enable Row Level Security
-ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
-
 -- Create draft_tokens table for managing draft access
 CREATE TABLE draft_tokens (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
