@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, Fragment, useRef } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { getDatabase, getPage, getBlocks } from '../../lib/notion'
@@ -6,41 +6,77 @@ import { supabase } from '../../lib/supabase'
 import NavBar from '../../components/navbar'
 import styles from '../post.module.css'
 
-// Text component from blog post page
-export const Text = ({ text }) => {
+// Text component with selection support
+export const Text = ({ text, blockId, onTextSelect }) => {
   if (!text) {
     return null;
   }
-  return text.map((value) => {
-    const {
-      annotations: { bold, code, color, italic, strikethrough, underline },
-      text,
-    } = value;
-    return (
-      <span
-        className={[
-          bold ? styles.bold : "",
-          code ? styles.code : "",
-          italic ? styles.italic : "",
-          strikethrough ? styles.strikethrough : "",
-          underline ? styles.underline : "",
-        ].join(" ")}
-        style={color !== "default" ? { color } : {}}
-      >
-        {text?.link ? (
-          <a target="_blank" rel="noopener noreferrer" href={text.link.url}>
-            {text.content}
-          </a>
-        ) : (
-          text?.content
-        )}
-      </span>
-    );
-  });
+  
+  const handleMouseUp = () => {
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+    
+    if (selectedText) {
+      const range = selection.getRangeAt(0);
+      const container = range.commonAncestorContainer.parentElement;
+      
+      // Get selection bounds relative to the block
+      const blockElement = container.closest('[data-block-id]');
+      if (blockElement) {
+        const blockRect = blockElement.getBoundingClientRect();
+        const selectionRect = range.getBoundingClientRect();
+        
+        onTextSelect({
+          blockId,
+          selectedText,
+          start: range.startOffset,
+          end: range.endOffset,
+          bounds: {
+            top: selectionRect.top - blockRect.top,
+            left: selectionRect.left - blockRect.left,
+            width: selectionRect.width,
+            height: selectionRect.height
+          }
+        });
+      }
+    }
+  };
+  
+  return (
+    <span onMouseUp={handleMouseUp}>
+      {text.map((value, index) => {
+        const {
+          annotations: { bold, code, color, italic, strikethrough, underline },
+          text,
+        } = value;
+        return (
+          <span
+            key={index}
+            className={[
+              bold ? styles.bold : "",
+              code ? styles.code : "",
+              italic ? styles.italic : "",
+              strikethrough ? styles.strikethrough : "",
+              underline ? styles.underline : "",
+            ].join(" ")}
+            style={color !== "default" ? { color } : {}}
+          >
+            {text?.link ? (
+              <a target="_blank" rel="noopener noreferrer" href={text.link.url}>
+                {text.content}
+              </a>
+            ) : (
+              text?.content
+            )}
+          </span>
+        );
+      })}
+    </span>
+  );
 };
 
 // Render nested list helper
-const renderNestedList = (block) => {
+const renderNestedList = (block, onTextSelect) => {
   const { type } = block;
   const value = block[type];
   if (!value) return null;
@@ -48,156 +84,260 @@ const renderNestedList = (block) => {
   const isNumberedList = value.children[0].type === "numbered_list_item";
 
   if (isNumberedList) {
-    return <ol>{value.children.map((block) => renderBlock(block))}</ol>;
+    return <ol>{value.children.map((block) => renderBlock(block, onTextSelect))}</ol>;
   }
-  return <ul>{value.children.map((block) => renderBlock(block))}</ul>;
+  return <ul>{value.children.map((block) => renderBlock(block, onTextSelect))}</ul>;
 };
 
-// Render block function from blog post page
-const renderBlock = (block) => {
+// Highlighted text component
+const HighlightedText = ({ text, highlights }) => {
+  if (!text || !highlights || highlights.length === 0) {
+    return <Text text={text} />;
+  }
+  
+  // Sort highlights by start position
+  const sortedHighlights = [...highlights].sort((a, b) => a.selection_start - b.selection_start);
+  
+  return text.map((value, valueIndex) => {
+    const textContent = value.text?.content || '';
+    let lastEnd = 0;
+    const segments = [];
+    
+    sortedHighlights.forEach(highlight => {
+      if (highlight.selection_start < textContent.length) {
+        // Add non-highlighted text before this highlight
+        if (highlight.selection_start > lastEnd) {
+          segments.push({
+            text: textContent.substring(lastEnd, highlight.selection_start),
+            highlighted: false
+          });
+        }
+        
+        // Add highlighted text
+        const highlightEnd = Math.min(highlight.selection_end, textContent.length);
+        segments.push({
+          text: textContent.substring(highlight.selection_start, highlightEnd),
+          highlighted: true,
+          commentId: highlight.id,
+          color: highlight.author_color
+        });
+        
+        lastEnd = highlightEnd;
+      }
+    });
+    
+    // Add remaining non-highlighted text
+    if (lastEnd < textContent.length) {
+      segments.push({
+        text: textContent.substring(lastEnd),
+        highlighted: false
+      });
+    }
+    
+    return (
+      <span key={valueIndex}>
+        {segments.map((segment, index) => (
+          <span
+            key={index}
+            className={segment.highlighted ? 'bg-yellow-200 cursor-pointer hover:bg-yellow-300' : ''}
+            style={segment.highlighted ? { backgroundColor: `${segment.color}20` } : {}}
+            data-comment-id={segment.commentId}
+          >
+            {segment.text}
+          </span>
+        ))}
+      </span>
+    );
+  });
+};
+
+// Render block function with selection support
+const renderBlock = (block, onTextSelect, comments = []) => {
   const { type, id } = block;
   const value = block[type];
+  const blockComments = comments.filter(c => c.block_id === id);
 
-  switch (type) {
-    case "paragraph":
-      return (
-        <p className="my-5 leading-7">
-          <Text text={value.rich_text} />
-        </p>
-      );
-    case "heading_1":
-      return (
-        <h1>
-          <Text text={value.rich_text} />
-        </h1>
-      );
-    case "heading_2":
-      return (
-        <h2>
-          <Text text={value.rich_text} />
-        </h2>
-      );
-    case "heading_3":
-      return (
-        <h3 className="font-bold text-xl mt-9 mb-2">
-          <Text text={value.rich_text} />
-        </h3>
-      );
-    case "bulleted_list_item":
-    case "numbered_list_item":
-      return (
-        <li className="pl-4 my-2">
-          <Text text={value.rich_text} />
-          {!!value.children && renderNestedList(block)}
-        </li>
-      );
-    case "to_do":
-      return (
-        <div>
-          <label htmlFor={id}>
-            <input type="checkbox" id={id} defaultChecked={value.checked} />{" "}
-            <Text text={value.rich_text} />
-          </label>
-        </div>
-      );
-    case "toggle":
-      return (
-        <details>
-          <summary>
-            <Text text={value.rich_text} />
-          </summary>
-          {value.children?.map((block) => (
-            <Fragment key={block.id}>{renderBlock(block)}</Fragment>
-          ))}
-        </details>
-      );
-    case "child_page":
-      return <p>{value.title}</p>;
-    case "image":
-      if (value.type !== "external") return null;
-      const src =
-        value.type === "external" ? value.external.url : value.file.url;
-      const caption = value.caption ? value.caption[0]?.plain_text : "";
-      return (
-        <figure className="relative">
-          <img
-            fill
-            src={src}
-            alt={caption}
-            className="my-5 rounded-lg object-cover"
-          />
-          {caption && <figcaption>{caption}</figcaption>}
-        </figure>
-      );
-    case "divider":
-      return <hr key={id} />;
-    case "quote":
-      return (
-        <div class="bg-gray-100 border-l-4 border-gray-500 text-gray-700 p-4 my-4 rounded italic">
-          <blockquote key={id}>{value.rich_text[0].plain_text}</blockquote>
-        </div>
-      );
-    case "code":
-      return (
-        <pre className={styles.pre}>
-          <code className={styles.code_block} key={id}>
-            {value.rich_text[0].plain_text}
-          </code>
-        </pre>
-      );
-    case "file":
-      const src_file =
-        value.type === "external" ? value.external.url : value.file.url;
-      const splitSourceArray = src_file.split("/");
-      const lastElementInArray = splitSourceArray[splitSourceArray.length - 1];
-      const caption_file = value.caption ? value.caption[0]?.plain_text : "";
-      return (
-        <figure>
-          <div className={styles.file}>
-            📎{" "}
-            <Link href={src_file} passHref>
-              {lastElementInArray.split("?")[0]}
-            </Link>
+  const content = (() => {
+    switch (type) {
+      case "paragraph":
+        return (
+          <p className="my-5 leading-7" data-block-id={id}>
+            {blockComments.length > 0 ? (
+              <HighlightedText text={value.rich_text} highlights={blockComments} />
+            ) : (
+              <Text text={value.rich_text} blockId={id} onTextSelect={onTextSelect} />
+            )}
+          </p>
+        );
+      case "heading_1":
+        return (
+          <h1 data-block-id={id}>
+            <Text text={value.rich_text} blockId={id} onTextSelect={onTextSelect} />
+          </h1>
+        );
+      case "heading_2":
+        return (
+          <h2 data-block-id={id}>
+            <Text text={value.rich_text} blockId={id} onTextSelect={onTextSelect} />
+          </h2>
+        );
+      case "heading_3":
+        return (
+          <h3 className="font-bold text-xl mt-9 mb-2" data-block-id={id}>
+            <Text text={value.rich_text} blockId={id} onTextSelect={onTextSelect} />
+          </h3>
+        );
+      case "bulleted_list_item":
+      case "numbered_list_item":
+        return (
+          <li className="pl-4 my-2" data-block-id={id}>
+            <Text text={value.rich_text} blockId={id} onTextSelect={onTextSelect} />
+            {!!value.children && renderNestedList(block, onTextSelect)}
+          </li>
+        );
+      case "image":
+        if (value.type !== "external") return null;
+        const src = value.external.url;
+        const caption = value.caption ? value.caption[0]?.plain_text : "";
+        return (
+          <figure className="relative">
+            <img
+              src={src}
+              alt={caption}
+              className="my-5 rounded-lg object-cover"
+            />
+            {caption && <figcaption>{caption}</figcaption>}
+          </figure>
+        );
+      default:
+        return null;
+    }
+  })();
+
+  return <div key={id}>{content}</div>;
+};
+
+// Comment thread component
+const CommentThread = ({ comment, replies, onReply, currentUser }) => {
+  const [replyText, setReplyText] = useState('');
+  const [showReplyForm, setShowReplyForm] = useState(false);
+
+  const handleReply = async (e) => {
+    e.preventDefault();
+    if (replyText.trim()) {
+      await onReply(comment.id, replyText);
+      setReplyText('');
+      setShowReplyForm(false);
+    }
+  };
+
+  return (
+    <div className="border-l-2 border-gray-200 pl-3 mb-4">
+      <div className="bg-white rounded-lg p-3 shadow-sm">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+              style={{ backgroundColor: comment.author_color }}
+            >
+              {comment.author_name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="font-medium text-sm">{comment.author_name}</div>
+              <div className="text-xs text-gray-500">
+                {new Date(comment.created_at).toLocaleString()}
+              </div>
+            </div>
           </div>
-          {caption_file && <figcaption>{caption_file}</figcaption>}
-        </figure>
-      );
-    case "bookmark":
-      const href = value.url;
-      return (
-        <a href={href} target="_blank" className={styles.bookmark}>
-          {href}
-        </a>
-      );
-    default:
-      return `❌ Unsupported block (${
-        type === "unsupported" ? "unsupported by Notion API" : type
-      })`;
-  }
+          {comment.is_resolved && (
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+              Resolved
+            </span>
+          )}
+        </div>
+        
+        <div className="text-sm text-gray-700 mb-2">{comment.content}</div>
+        
+        {comment.selected_text && (
+          <div className="text-xs text-gray-500 italic mb-2 p-2 bg-gray-50 rounded">
+            "{comment.selected_text}"
+          </div>
+        )}
+        
+        <button
+          onClick={() => setShowReplyForm(!showReplyForm)}
+          className="text-xs text-blue-600 hover:text-blue-800"
+        >
+          Reply
+        </button>
+      </div>
+
+      {/* Replies */}
+      {replies.map((reply) => (
+        <div key={reply.id} className="ml-6 mt-2">
+          <CommentThread 
+            comment={reply} 
+            replies={[]} 
+            onReply={onReply}
+            currentUser={currentUser}
+          />
+        </div>
+      ))}
+
+      {/* Reply form */}
+      {showReplyForm && (
+        <form onSubmit={handleReply} className="ml-6 mt-2">
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Write a reply..."
+            className="w-full p-2 text-sm border rounded-md resize-none"
+            rows={2}
+            autoFocus
+          />
+          <div className="flex gap-2 mt-1">
+            <button
+              type="submit"
+              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Reply
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowReplyForm(false)}
+              className="px-3 py-1 text-xs border rounded hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
 };
 
 export default function DraftPost({ post, blocks, slug, token, error }) {
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [commentForm, setCommentForm] = useState({
-    author_name: '',
-    author_email: '',
-    content: ''
+  const [currentUser, setCurrentUser] = useState({
+    name: '',
+    email: '',
+    color: '#' + Math.floor(Math.random()*16777215).toString(16)
   })
-  const [selectedBlockId, setSelectedBlockId] = useState(null)
-  const [showCommentForm, setShowCommentForm] = useState(false)
+  const [selectedText, setSelectedText] = useState(null)
+  const [commentText, setCommentText] = useState('')
+  const [showUserModal, setShowUserModal] = useState(true)
 
   useEffect(() => {
-    if (token && slug) {
+    if (token && slug && currentUser.name) {
       fetchComments()
       setupRealtimeSubscription()
     }
     
     return () => {
-      // Cleanup subscription on unmount
       supabase.removeAllChannels()
     }
-  }, [token, slug])
+  }, [token, slug, currentUser.name])
 
   if (error) {
     return (
@@ -247,71 +387,39 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
   }
 
   const setupRealtimeSubscription = () => {
-    // Subscribe to real-time comments for this draft
     const channel = supabase
       .channel(`draft-comments-${slug}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'comments',
           filter: `notion_page_id=eq.${post.id}`
         },
         (payload) => {
-          console.log('New comment received:', payload)
-          // Add the new comment to the state
-          setComments(prevComments => [...prevComments, payload.new])
+          if (payload.eventType === 'INSERT') {
+            setComments(prev => [...prev, payload.new])
+          } else if (payload.eventType === 'UPDATE') {
+            setComments(prev => prev.map(c => c.id === payload.new.id ? payload.new : c))
+          } else if (payload.eventType === 'DELETE') {
+            setComments(prev => prev.filter(c => c.id !== payload.old.id))
+          }
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'comments',
-          filter: `notion_page_id=eq.${post.id}`
-        },
-        (payload) => {
-          console.log('Comment updated:', payload)
-          // Update the comment in state
-          setComments(prevComments => 
-            prevComments.map(comment => 
-              comment.id === payload.new.id ? payload.new : comment
-            )
-          )
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'comments',
-          filter: `notion_page_id=eq.${post.id}`
-        },
-        (payload) => {
-          console.log('Comment deleted:', payload)
-          // Remove the comment from state
-          setComments(prevComments => 
-            prevComments.filter(comment => comment.id !== payload.old.id)
-          )
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status)
-      })
+      .subscribe()
 
     return channel
   }
 
-  const handleSubmitComment = async (e) => {
+  const handleTextSelect = (selection) => {
+    setSelectedText(selection)
+  }
+
+  const handleAddComment = async (e) => {
     e.preventDefault()
     
-    if (!selectedBlockId || !commentForm.content.trim() || !commentForm.author_name.trim()) {
-      alert('Please fill in all required fields and select a block to comment on.')
-      return
-    }
+    if (!selectedText || !commentText.trim()) return
 
     try {
       const response = await fetch(`/api/draft/${slug}/comments`, {
@@ -321,45 +429,56 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
           'token': token
         },
         body: JSON.stringify({
-          block_id: selectedBlockId,
-          content: commentForm.content,
-          author_name: commentForm.author_name,
-          author_email: commentForm.author_email
+          block_id: selectedText.blockId,
+          content: commentText,
+          author_name: currentUser.name,
+          author_email: currentUser.email,
+          author_color: currentUser.color,
+          selection_start: selectedText.start,
+          selection_end: selectedText.end,
+          selected_text: selectedText.selectedText
         })
       })
 
       if (response.ok) {
-        const data = await response.json()
-        setComments([...comments, data.comment])
-        setCommentForm({ author_name: '', author_email: '', content: '' })
-        setSelectedBlockId(null)
-        setShowCommentForm(false)
-      } else {
-        const error = await response.json()
-        alert('Error adding comment: ' + error.error)
+        setCommentText('')
+        setSelectedText(null)
+        window.getSelection().removeAllRanges()
       }
     } catch (error) {
       console.error('Error submitting comment:', error)
-      alert('Error adding comment. Please try again.')
     }
   }
 
-  const handleBlockClick = (blockId) => {
-    setSelectedBlockId(blockId)
-    setShowCommentForm(true)
-    // Scroll comment form into view
-    setTimeout(() => {
-      document.getElementById('comment-form')?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+  const handleReply = async (parentId, content) => {
+    try {
+      const response = await fetch(`/api/draft/${slug}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token
+        },
+        body: JSON.stringify({
+          block_id: comments.find(c => c.id === parentId)?.block_id,
+          content,
+          author_name: currentUser.name,
+          author_email: currentUser.email,
+          author_color: currentUser.color,
+          parent_comment_id: parentId
+        })
+      })
+
+      if (response.ok) {
+        await fetchComments()
+      }
+    } catch (error) {
+      console.error('Error submitting reply:', error)
+    }
   }
 
-  const getCommentsForBlock = (blockId) => {
-    return comments.filter(comment => comment.block_id === blockId && !comment.parent_comment_id)
-  }
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString()
-  }
+  // Group comments by thread
+  const commentThreads = comments.filter(c => !c.parent_comment_id)
+  const getReplies = (commentId) => comments.filter(c => c.parent_comment_id === commentId)
 
   return (
     <div>
@@ -368,227 +487,133 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <main className="max-w-2xl mx-auto">
-        <div className="antialiased mb-40 mt-8 md:mt-20 lg:mt-32 px-4">
-          <NavBar />
-        {/* Draft Banner */}
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-8">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                <strong>Draft Preview:</strong> This is a preview of a draft post. Comments and feedback are welcome.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Post Header */}
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">
-            {post.properties.Name.title[0]?.plain_text}
-          </h1>
-          
-          {post.properties.Tags?.multi_select?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {post.properties.Tags.multi_select.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="px-3 py-1 text-sm rounded-full"
-                  style={{
-                    backgroundColor: tag.color === 'default' ? '#f1f3f4' : `var(--${tag.color})`,
-                    color: tag.color === 'default' ? '#3c4043' : 'white'
-                  }}
-                >
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="text-gray-600 text-sm">
-            Status: <span className="font-medium text-yellow-600">Draft</span>
-            {post.properties['Last edited time'] && (
-              <span className="ml-4">
-                Last updated: {new Date(post.properties['Last edited time'].last_edited_time).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-        </header>
-
-        {/* Post Content */}
-        <article className="prose max-w-none mb-12">
-          {blocks.map((block) => {
-            const blockComments = getCommentsForBlock(block.id)
-            return (
-              <div key={block.id} className="relative group">
-                {/* Block content with click handler */}
-                <div
-                  className="cursor-pointer transition-colors hover:bg-blue-50 rounded p-2 -m-2"
-                  onClick={() => handleBlockClick(block.id)}
-                  title="Click to add a comment on this block"
-                >
-                  {renderBlock(block)}
-                </div>
-
-                {/* Comment indicator */}
-                {blockComments.length > 0 && (
-                  <div className="absolute -right-2 top-0">
-                    <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-blue-500 rounded-full">
-                      {blockComments.length}
-                    </span>
-                  </div>
-                )}
-
-                {/* Comments for this block */}
-                {blockComments.length > 0 && (
-                  <div className="ml-8 mt-4 space-y-3 border-l-2 border-blue-200 pl-4">
-                    {blockComments.map((comment) => (
-                      <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="font-medium text-sm text-gray-900">
-                            {comment.author_name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {formatDate(comment.created_at)}
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                          {comment.content}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Selected block indicator */}
-                {selectedBlockId === block.id && showCommentForm && (
-                  <div className="absolute -left-2 top-0 bottom-0 w-1 bg-blue-500 rounded"></div>
-                )}
-              </div>
-            )
-          })}
-        </article>
-
-        {/* Comment Form */}
-        {showCommentForm && (
-          <div id="comment-form" className="bg-white border-2 border-blue-200 rounded-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold mb-4">Add a Comment</h3>
-            {selectedBlockId && (
-              <p className="text-sm text-gray-600 mb-4">
-                Commenting on the selected block above. Click a different block to change your selection.
-              </p>
-            )}
-            
-            <form onSubmit={handleSubmitComment} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="author_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="author_name"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={commentForm.author_name}
-                    onChange={(e) => setCommentForm({ ...commentForm, author_name: e.target.value })}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="author_email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email (optional)
-                  </label>
-                  <input
-                    type="email"
-                    id="author_email"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={commentForm.author_email}
-                    onChange={(e) => setCommentForm({ ...commentForm, author_email: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
-                  Comment *
-                </label>
-                <textarea
-                  id="content"
-                  required
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={commentForm.content}
-                  onChange={(e) => setCommentForm({ ...commentForm, content: e.target.value })}
-                  placeholder="Share your thoughts, feedback, or suggestions..."
-                />
-              </div>
-
-              <div className="flex justify-between">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCommentForm(false)
-                    setSelectedBlockId(null)
-                  }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Add Comment
-                </button>
-              </div>
+      {/* User setup modal */}
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Enter your name to comment</h2>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              if (currentUser.name.trim()) {
+                setShowUserModal(false)
+              }
+            }}>
+              <input
+                type="text"
+                placeholder="Your name"
+                value={currentUser.name}
+                onChange={(e) => setCurrentUser({...currentUser, name: e.target.value})}
+                className="w-full p-2 border rounded mb-3"
+                autoFocus
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email (optional)"
+                value={currentUser.email}
+                onChange={(e) => setCurrentUser({...currentUser, email: e.target.value})}
+                className="w-full p-2 border rounded mb-4"
+              />
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              >
+                Continue
+              </button>
             </form>
           </div>
-        )}
-
-        {/* Comments Summary */}
-        {!loading && comments.length > 0 && (
-          <div className="border-t pt-8">
-            <h3 className="text-xl font-semibold mb-4">Comments Summary</h3>
-            <p className="text-gray-600 mb-4">
-              {comments.length} comment{comments.length !== 1 ? 's' : ''} on this draft
-            </p>
-            
-            <div className="space-y-3">
-              {comments.map((comment) => (
-                <div key={comment.id} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-medium text-gray-900">
-                      {comment.author_name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {formatDate(comment.created_at)}
-                    </div>
-                  </div>
-                  <div className="text-gray-700 whitespace-pre-wrap mb-2">
-                    {comment.content}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Block ID: {comment.block_id.substring(0, 8)}...
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!loading && comments.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <p>No comments yet. Click on any block above to add the first comment!</p>
-          </div>
-        )}
         </div>
-      </main>
+      )}
+
+      <div className="flex">
+        {/* Main content area */}
+        <main className="flex-1 max-w-4xl mx-auto px-8">
+          <div className="antialiased mb-40 mt-8 md:mt-20 lg:mt-32">
+            <NavBar />
+
+            {/* Draft banner */}
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-8">
+              <p className="text-sm text-yellow-700">
+                <strong>Draft Preview:</strong> Select any text to add comments
+              </p>
+            </div>
+
+            {/* Post header */}
+            <header className="mb-8">
+              <h1 className="text-4xl font-bold mb-4">
+                {post.properties.Name.title[0]?.plain_text}
+              </h1>
+            </header>
+
+            {/* Post content */}
+            <article className="prose max-w-none">
+              {blocks.map((block) => renderBlock(block, handleTextSelect, comments))}
+            </article>
+          </div>
+        </main>
+
+        {/* Comments sidebar */}
+        <aside className="w-96 bg-gray-50 h-screen sticky top-0 overflow-y-auto border-l">
+          <div className="p-4">
+            <h2 className="text-lg font-semibold mb-4">Comments</h2>
+
+            {/* Add comment form when text is selected */}
+            {selectedText && (
+              <form onSubmit={handleAddComment} className="mb-6 p-4 bg-white rounded-lg shadow">
+                <div className="text-sm text-gray-600 mb-2">
+                  Commenting on: <span className="italic">"{selectedText.selectedText}"</span>
+                </div>
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Add a comment..."
+                  className="w-full p-2 border rounded resize-none"
+                  rows={3}
+                  autoFocus
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                  >
+                    Comment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedText(null)
+                      setCommentText('')
+                      window.getSelection().removeAllRanges()
+                    }}
+                    className="px-4 py-2 border text-sm rounded hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Comments list */}
+            {loading ? (
+              <p className="text-gray-500">Loading comments...</p>
+            ) : commentThreads.length === 0 ? (
+              <p className="text-gray-500">No comments yet. Select text to add one!</p>
+            ) : (
+              <div className="space-y-4">
+                {commentThreads.map((comment) => (
+                  <CommentThread
+                    key={comment.id}
+                    comment={comment}
+                    replies={getReplies(comment.id)}
+                    onReply={handleReply}
+                    currentUser={currentUser}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }

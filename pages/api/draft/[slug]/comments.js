@@ -57,7 +57,17 @@ async function handleGetComments(req, res, draftToken) {
 
 async function handleCreateComment(req, res, draftToken) {
   try {
-    const { block_id, content, author_name, author_email, parent_comment_id } = req.body
+    const { 
+      block_id, 
+      content, 
+      author_name, 
+      author_email, 
+      author_color,
+      parent_comment_id,
+      selection_start,
+      selection_end,
+      selected_text
+    } = req.body
 
     if (!block_id || !content || !author_name) {
       return res.status(400).json({ error: 'Missing required fields' })
@@ -72,7 +82,11 @@ async function handleCreateComment(req, res, draftToken) {
         content: content.trim(),
         author_name: author_name.trim(),
         author_email: author_email?.trim() || null,
-        parent_comment_id: parent_comment_id || null
+        author_color: author_color || '#3B82F6',
+        parent_comment_id: parent_comment_id || null,
+        selection_start: selection_start || null,
+        selection_end: selection_end || null,
+        selected_text: selected_text || null
       })
       .select()
       .single()

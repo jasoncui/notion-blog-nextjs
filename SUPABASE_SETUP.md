@@ -59,7 +59,11 @@ CREATE TABLE comments (
   draft_token_id UUID REFERENCES draft_tokens(id) ON DELETE CASCADE,
   notion_page_id TEXT NOT NULL,
   block_id TEXT, -- Notion block ID that comment is attached to
-  block_position INTEGER, -- Position within the block for precise targeting
+  -- Text range selection fields
+  selection_start INTEGER, -- Start position of selected text in block
+  selection_end INTEGER, -- End position of selected text in block
+  selected_text TEXT, -- The actual selected text for reference
+  -- Comment content
   content TEXT NOT NULL,
   author_name TEXT NOT NULL,
   author_email TEXT,
