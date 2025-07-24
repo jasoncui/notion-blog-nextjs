@@ -127,6 +127,10 @@ const renderBlock = (block) => {
       // Only render if we have a valid source
       if (!src) return null;
       
+      // Get dimensions if available to prevent layout shift
+      const width = value.width;
+      const height = value.height;
+      
       return (
         <figure className="relative my-5">
           <img
@@ -134,6 +138,9 @@ const renderBlock = (block) => {
             alt={caption || "Blog post image"}
             className="w-full rounded-lg object-cover"
             loading="lazy"
+            width={width}
+            height={height}
+            style={width && height ? { aspectRatio: `${width}/${height}` } : {}}
           />
           {caption && (
             <figcaption className="mt-2 text-sm text-gray-600 italic text-center">
