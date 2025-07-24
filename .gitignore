@@ -33,6 +33,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-# cached notion images
-/public/images/notion/*
-!/public/images/notion/.gitkeep
+# cached notion images (keep directory structure but ignore cached files)
+public/images/notion/*
+!public/images/notion/.gitkeep
