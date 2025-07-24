@@ -5,13 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "clean-images": "node -e \"import('./lib/imageUtils.js').then(m => m.cleanupOldImages(30))\""
   },
   "dependencies": {
     "@notionhq/client": "^2.2.1",
     "@vercel/analytics": "^1.0.1",
     "eslint-config-next": "^13.4.4",
     "feather-icons-react": "^0.6.2",
+    "image-size": "^2.0.2",
     "next": "^13.4.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -1,0 +1,2 @@
+# This file ensures the notion images directory is tracked by git
+# Cached Notion images will be stored here during build time

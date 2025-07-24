@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import Head from "next/head";
 import { getDatabase, getPage, getBlocks } from "../lib/notion";
+import { processImagesInBlocks } from "../lib/imageUtils";
 import Link from "next/link";
 import { databaseId } from "./index.js";
 import styles from "./post.module.css";
@@ -10,13 +11,20 @@ export const Text = ({ text }) => {
   if (!text) {
     return null;
   }
-  return text.map((value) => {
+  return text.map((value, index) => {
+    // Handle cases where value might be malformed
+    if (!value || !value.annotations || !value.text) {
+      return null;
+    }
+    
     const {
       annotations: { bold, code, color, italic, strikethrough, underline },
-      text,
+      text: textContent,
     } = value;
+    
     return (
       <span
+        key={index}
         className={[
           bold ? styles.bold : "",
           code ? styles.code : "",
@@ -26,16 +34,16 @@ export const Text = ({ text }) => {
         ].join(" ")}
         style={color !== "default" ? { color } : {}}
       >
-        {text.link ? (
-          <a target="_blank" rel="noopener noreferrer" href={text.link.url}>
-            {text.content}
+        {textContent?.link ? (
+          <a target="_blank" rel="noopener noreferrer" href={textContent.link.url}>
+            {textContent.content}
           </a>
         ) : (
-          text.content
+          textContent?.content || ""
         )}
       </span>
     );
-  });
+  }).filter(Boolean); // Remove null values
 };
 
 const renderNestedList = (block) => {
@@ -111,19 +119,34 @@ const renderBlock = (block) => {
     case "child_page":
       return <p>{value.title}</p>;
     case "image":
-      if (value.type !== "external") return null;
-      const src =
-        value.type === "external" ? value.external.url : value.file.url;
+      // Use local cached image if available, otherwise fall back to original URL
+      const src = value.local_url || 
+        (value.type === "external" ? value.external.url : value.file.url);
       const caption = value.caption ? value.caption[0]?.plain_text : "";
+      
+      // Only render if we have a valid source
+      if (!src) return null;
+      
+      // Get dimensions if available to prevent layout shift
+      const width = value.width;
+      const height = value.height;
+      
       return (
-        <figure className="relative">
+        <figure className="relative my-5">
           <img
-            fill
             src={src}
-            alt={caption}
-            className="my-5 rounded-lg object-cover"
+            alt={caption || "Blog post image"}
+            className="w-full rounded-lg object-cover"
+            loading="lazy"
+            width={width}
+            height={height}
+            style={width && height ? { aspectRatio: `${width}/${height}` } : {}}
           />
-          {caption && <figcaption>{caption}</figcaption>}
+          {caption && (
+            <figcaption className="mt-2 text-sm text-gray-600 italic text-center">
+              {caption}
+            </figcaption>
+          )}
         </figure>
       );
     case "divider":
@@ -311,12 +334,16 @@ export const getStaticProps = async (context) => {
     return block;
   });
 
+  // Process images in all blocks (including nested ones)
+  console.log('Processing images for build-time caching...');
+  const processedBlocks = await processImagesInBlocks(blocksWithChildren);
+
   console.log(JSON.stringify(page, undefined, 2));
 
   return {
     props: {
       page,
-      blocks: blocksWithChildren,
+      blocks: processedBlocks,
     },
     revalidate: 1,
   };
