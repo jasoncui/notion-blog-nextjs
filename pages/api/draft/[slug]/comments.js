@@ -9,7 +9,6 @@ export default async function handler(req, res) {
     .from('draft_tokens')
     .select('*')
     .eq('token', token)
-    .eq('slug', slug)
     .eq('is_active', true)
     .single()
 
@@ -18,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   // Check if token is expired
-  if (new Date(draftToken.expires_at) < new Date()) {
+  if (draftToken.expires_at && new Date(draftToken.expires_at) < new Date()) {
     return res.status(401).json({ error: 'Token expired' })
   }
 
@@ -39,7 +38,7 @@ export default async function handler(req, res) {
 async function handleGetComments(req, res, draftToken) {
   try {
     const { data: comments, error } = await supabase
-      .from('draft_comments')
+      .from('comments')
       .select('*')
       .eq('draft_token_id', draftToken.id)
       .order('created_at', { ascending: true })
@@ -65,9 +64,10 @@ async function handleCreateComment(req, res, draftToken) {
     }
 
     const { data: comment, error } = await supabase
-      .from('draft_comments')
+      .from('comments')
       .insert({
         draft_token_id: draftToken.id,
+        notion_page_id: draftToken.notion_page_id,
         block_id,
         content: content.trim(),
         author_name: author_name.trim(),
@@ -99,7 +99,7 @@ async function handleUpdateComment(req, res, draftToken) {
 
     // First verify the comment belongs to this draft
     const { data: existingComment, error: fetchError } = await supabase
-      .from('draft_comments')
+      .from('comments')
       .select('*')
       .eq('id', comment_id)
       .eq('draft_token_id', draftToken.id)
@@ -110,7 +110,7 @@ async function handleUpdateComment(req, res, draftToken) {
     }
 
     const { data: comment, error } = await supabase
-      .from('draft_comments')
+      .from('comments')
       .update({
         content: content.trim(),
         updated_at: new Date().toISOString()
@@ -141,7 +141,7 @@ async function handleDeleteComment(req, res, draftToken) {
 
     // First verify the comment belongs to this draft
     const { data: existingComment, error: fetchError } = await supabase
-      .from('draft_comments')
+      .from('comments')
       .select('*')
       .eq('id', comment_id)
       .eq('draft_token_id', draftToken.id)
@@ -152,7 +152,7 @@ async function handleDeleteComment(req, res, draftToken) {
     }
 
     const { error } = await supabase
-      .from('draft_comments')
+      .from('comments')
       .delete()
       .eq('id', comment_id)
 

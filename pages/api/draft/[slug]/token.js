@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       .insert({
         token,
         notion_page_id: page.id,
-        slug,
+        title: page.properties.Name.title[0]?.plain_text || 'Untitled',
         expires_at: expiresAt.toISOString(),
         is_active: true
       })

@@ -1,10 +1,180 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import Head from 'next/head'
-import Layout from '../../components/layout'
+import Link from 'next/link'
 import { getDatabase, getPage, getBlocks } from '../../lib/notion'
-import { processImagesInBlocks } from '../../lib/imageUtils'
-import { renderBlock } from '../../components/notion-blocks'
 import { supabase } from '../../lib/supabase'
+import NavBar from '../../components/navbar'
+import styles from '../post.module.css'
+
+// Text component from blog post page
+export const Text = ({ text }) => {
+  if (!text) {
+    return null;
+  }
+  return text.map((value) => {
+    const {
+      annotations: { bold, code, color, italic, strikethrough, underline },
+      text,
+    } = value;
+    return (
+      <span
+        className={[
+          bold ? styles.bold : "",
+          code ? styles.code : "",
+          italic ? styles.italic : "",
+          strikethrough ? styles.strikethrough : "",
+          underline ? styles.underline : "",
+        ].join(" ")}
+        style={color !== "default" ? { color } : {}}
+      >
+        {text?.link ? (
+          <a target="_blank" rel="noopener noreferrer" href={text.link.url}>
+            {text.content}
+          </a>
+        ) : (
+          text?.content
+        )}
+      </span>
+    );
+  });
+};
+
+// Render nested list helper
+const renderNestedList = (block) => {
+  const { type } = block;
+  const value = block[type];
+  if (!value) return null;
+
+  const isNumberedList = value.children[0].type === "numbered_list_item";
+
+  if (isNumberedList) {
+    return <ol>{value.children.map((block) => renderBlock(block))}</ol>;
+  }
+  return <ul>{value.children.map((block) => renderBlock(block))}</ul>;
+};
+
+// Render block function from blog post page
+const renderBlock = (block) => {
+  const { type, id } = block;
+  const value = block[type];
+
+  switch (type) {
+    case "paragraph":
+      return (
+        <p className="my-5 leading-7">
+          <Text text={value.rich_text} />
+        </p>
+      );
+    case "heading_1":
+      return (
+        <h1>
+          <Text text={value.rich_text} />
+        </h1>
+      );
+    case "heading_2":
+      return (
+        <h2>
+          <Text text={value.rich_text} />
+        </h2>
+      );
+    case "heading_3":
+      return (
+        <h3 className="font-bold text-xl mt-9 mb-2">
+          <Text text={value.rich_text} />
+        </h3>
+      );
+    case "bulleted_list_item":
+    case "numbered_list_item":
+      return (
+        <li className="pl-4 my-2">
+          <Text text={value.rich_text} />
+          {!!value.children && renderNestedList(block)}
+        </li>
+      );
+    case "to_do":
+      return (
+        <div>
+          <label htmlFor={id}>
+            <input type="checkbox" id={id} defaultChecked={value.checked} />{" "}
+            <Text text={value.rich_text} />
+          </label>
+        </div>
+      );
+    case "toggle":
+      return (
+        <details>
+          <summary>
+            <Text text={value.rich_text} />
+          </summary>
+          {value.children?.map((block) => (
+            <Fragment key={block.id}>{renderBlock(block)}</Fragment>
+          ))}
+        </details>
+      );
+    case "child_page":
+      return <p>{value.title}</p>;
+    case "image":
+      if (value.type !== "external") return null;
+      const src =
+        value.type === "external" ? value.external.url : value.file.url;
+      const caption = value.caption ? value.caption[0]?.plain_text : "";
+      return (
+        <figure className="relative">
+          <img
+            fill
+            src={src}
+            alt={caption}
+            className="my-5 rounded-lg object-cover"
+          />
+          {caption && <figcaption>{caption}</figcaption>}
+        </figure>
+      );
+    case "divider":
+      return <hr key={id} />;
+    case "quote":
+      return (
+        <div class="bg-gray-100 border-l-4 border-gray-500 text-gray-700 p-4 my-4 rounded italic">
+          <blockquote key={id}>{value.rich_text[0].plain_text}</blockquote>
+        </div>
+      );
+    case "code":
+      return (
+        <pre className={styles.pre}>
+          <code className={styles.code_block} key={id}>
+            {value.rich_text[0].plain_text}
+          </code>
+        </pre>
+      );
+    case "file":
+      const src_file =
+        value.type === "external" ? value.external.url : value.file.url;
+      const splitSourceArray = src_file.split("/");
+      const lastElementInArray = splitSourceArray[splitSourceArray.length - 1];
+      const caption_file = value.caption ? value.caption[0]?.plain_text : "";
+      return (
+        <figure>
+          <div className={styles.file}>
+            📎{" "}
+            <Link href={src_file} passHref>
+              {lastElementInArray.split("?")[0]}
+            </Link>
+          </div>
+          {caption_file && <figcaption>{caption_file}</figcaption>}
+        </figure>
+      );
+    case "bookmark":
+      const href = value.url;
+      return (
+        <a href={href} target="_blank" className={styles.bookmark}>
+          {href}
+        </a>
+      );
+    default:
+      return `❌ Unsupported block (${
+        type === "unsupported" ? "unsupported by Notion API" : type
+      })`;
+  }
+};
 
 export default function DraftPost({ post, blocks, slug, token, error }) {
   const [comments, setComments] = useState([])
@@ -31,27 +201,29 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
 
   if (error) {
     return (
-      <Layout>
-        <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="antialiased mb-40 mt-8 md:mt-20 lg:mt-32 px-4">
+          <NavBar />
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
             <p className="text-gray-600">{error}</p>
           </div>
         </div>
-      </Layout>
+      </div>
     )
   }
 
   if (!post) {
     return (
-      <Layout>
-        <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="antialiased mb-40 mt-8 md:mt-20 lg:mt-32 px-4">
+          <NavBar />
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Draft Not Found</h1>
             <p className="text-gray-600">This draft post could not be found or the link has expired.</p>
           </div>
         </div>
-      </Layout>
+      </div>
     )
   }
 
@@ -84,7 +256,7 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
           event: 'INSERT',
           schema: 'public',
           table: 'comments',
-          filter: `draft_slug=eq.${slug}`
+          filter: `notion_page_id=eq.${post.id}`
         },
         (payload) => {
           console.log('New comment received:', payload)
@@ -98,7 +270,7 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
           event: 'UPDATE',
           schema: 'public',
           table: 'comments',
-          filter: `draft_slug=eq.${slug}`
+          filter: `notion_page_id=eq.${post.id}`
         },
         (payload) => {
           console.log('Comment updated:', payload)
@@ -116,7 +288,7 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
           event: 'DELETE',
           schema: 'public',
           table: 'comments',
-          filter: `draft_slug=eq.${slug}`
+          filter: `notion_page_id=eq.${post.id}`
         },
         (payload) => {
           console.log('Comment deleted:', payload)
@@ -190,13 +362,15 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
   }
 
   return (
-    <Layout>
+    <div>
       <Head>
         <title>{post.properties.Name.title[0]?.plain_text || 'Draft Post'}</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-2xl mx-auto">
+        <div className="antialiased mb-40 mt-8 md:mt-20 lg:mt-32 px-4">
+          <NavBar />
         {/* Draft Banner */}
         <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-8">
           <div className="flex">
@@ -413,8 +587,9 @@ export default function DraftPost({ post, blocks, slug, token, error }) {
             <p>No comments yet. Click on any block above to add the first comment!</p>
           </div>
         )}
-      </div>
-    </Layout>
+        </div>
+      </main>
+    </div>
   )
 }
 
@@ -439,7 +614,7 @@ export async function getServerSideProps(context) {
     }
 
     // Check if token is expired
-    if (new Date(draftToken.expires_at) < new Date()) {
+    if (draftToken.expires_at && new Date(draftToken.expires_at) < new Date()) {
       return {
         props: {
           error: 'This sharing link has expired'
@@ -448,7 +623,7 @@ export async function getServerSideProps(context) {
     }
 
     // Get the post from Notion
-    const post = await getPage(draftToken.page_id)
+    const post = await getPage(draftToken.notion_page_id)
     
     if (!post) {
       return {
@@ -468,15 +643,14 @@ export async function getServerSideProps(context) {
       }
     }
 
-    // Get blocks and process images
-    const blocks = await getBlocks(draftToken.page_id)
-    const processedBlocks = await processImagesInBlocks(blocks)
+    // Get blocks
+    const blocks = await getBlocks(draftToken.notion_page_id)
 
     return {
       props: {
         post,
-        blocks: processedBlocks,
-        slug: draftToken.slug,
+        blocks,
+        slug: draftToken.notion_page_id,
         token: draftToken.token
       }
     }
