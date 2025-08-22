@@ -40,7 +40,7 @@ export default function Home({ posts }) {
               <a
                 href="https://www.tubefilter.com/2023/11/30/brat-tv-monetization-acquires-jemi-creator-stores-ecommerce-platform/"
                 target="_blank"
-              >
+    q           >
                 acquired
               </a>{" "}
               by Brat TV.
