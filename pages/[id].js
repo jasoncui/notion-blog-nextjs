@@ -143,7 +143,7 @@ const renderBlock = (block) => {
             style={width && height ? { aspectRatio: `${width}/${height}` } : {}}
           />
           {caption && (
-            <figcaption className="mt-2 text-sm text-gray-600 italic text-center">
+            <figcaption className="mt-2 text-sm text-gray-600 dark:text-gray-400 italic text-center">
               {caption}
             </figcaption>
           )}
@@ -153,7 +153,7 @@ const renderBlock = (block) => {
       return <hr key={id} />;
     case "quote":
       return (
-        <div class="bg-gray-100 border-l-4 border-gray-500 text-gray-700 p-4 my-4 rounded italic">
+        <div className="bg-gray-100 border-l-4 border-gray-500 text-gray-700 dark:bg-neutral-800 dark:border-neutral-500 dark:text-neutral-300 p-4 my-4 rounded italic">
           <blockquote key={id}>{value.rich_text[0].plain_text}</blockquote>
         </div>
       );
@@ -241,7 +241,7 @@ export default function Post({ page, blocks }) {
           <div className="mb-12">
             {status === "Draft" ? (
               <div
-                className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4"
+                className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-600 dark:text-yellow-300 p-4"
                 role="alert"
               >
                 <p className="font-bold">Draft</p>
@@ -253,7 +253,7 @@ export default function Post({ page, blocks }) {
             <h1 className="font-extrabold text-3xl mt-4 mb-4">
               <Text text={page.properties.Name.title} />
             </h1>
-            <div className="font-mono text-neutral-500 tracking-tighter">
+            <div className="font-mono text-neutral-500 dark:text-neutral-400 tracking-tighter">
               {formattedDate}
             </div>
           </div>

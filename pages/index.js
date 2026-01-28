@@ -69,13 +69,13 @@ export default function Home({ posts }) {
                       post.properties?.Slug?.rich_text[0]?.text?.content ||
                       post.id
                     }`}
-                    className="text-black"
+                    className="text-black dark:text-white"
                   >
                     <h3 className="mb-1">
                       {post.properties.Name.title[0].plain_text}
                     </h3>
 
-                    <div className="font-mono text-sm text-neutral-500 tracking-tighter">
+                    <div className="font-mono text-sm text-neutral-500 dark:text-neutral-400 tracking-tighter">
                       {date}
                     </div>
                   </Link>

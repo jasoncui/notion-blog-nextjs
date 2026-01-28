@@ -34,10 +34,8 @@
   letter-spacing: 0.5px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .heading {
-    border-color: #343539;
-  }
+:global(.dark) .heading {
+  border-color: #343539;
 }
 
 .posts {
