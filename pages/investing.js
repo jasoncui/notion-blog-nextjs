@@ -118,15 +118,15 @@ export default function Investing() {
             
             <div className="space-y-6">
               {investments.map((investment) => (
-                <div key={investment.name} className="border-l-2 border-gray-200 pl-4 hover:border-gray-400 transition-colors">
+                <div key={investment.name} className="border-l-2 border-gray-200 dark:border-neutral-700 pl-4 hover:border-gray-400 dark:hover:border-neutral-500 transition-colors">
                   <div className="flex items-baseline justify-between">
                     <h3 className="font-semibold text-lg">{investment.name}</h3>
-                    <span className="font-mono text-sm text-neutral-500 tracking-tighter">
+                    <span className="font-mono text-sm text-neutral-500 dark:text-neutral-400 tracking-tighter">
                       {investment.year}
                     </span>
                   </div>
-                  <p className="text-gray-600 mt-1">{investment.description}</p>
-                  <span className="inline-block mt-2 text-xs font-mono uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">{investment.description}</p>
+                  <span className="inline-block mt-2 text-xs font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-neutral-800 px-2 py-1 rounded">
                     {investment.category}
                   </span>
                 </div>
