@@ -59,6 +59,36 @@ const renderNestedList = (block) => {
   return <ul>{value.children.map((block) => renderBlock(block))}</ul>;
 };
 
+const groupBlocks = (blocks) => {
+  const groups = [];
+  let i = 0;
+
+  while (i < blocks.length) {
+    const block = blocks[i];
+
+    if (block.type === "bulleted_list_item") {
+      const items = [];
+      while (i < blocks.length && blocks[i].type === "bulleted_list_item") {
+        items.push(blocks[i]);
+        i++;
+      }
+      groups.push({ id: items[0].id, type: "bulleted_list", items });
+    } else if (block.type === "numbered_list_item") {
+      const items = [];
+      while (i < blocks.length && blocks[i].type === "numbered_list_item") {
+        items.push(blocks[i]);
+        i++;
+      }
+      groups.push({ id: items[0].id, type: "numbered_list", items });
+    } else {
+      groups.push(block);
+      i++;
+    }
+  }
+
+  return groups;
+};
+
 const renderBlock = (block) => {
   const { type, id } = block;
   const value = block[type];
@@ -91,7 +121,7 @@ const renderBlock = (block) => {
     case "bulleted_list_item":
     case "numbered_list_item":
       return (
-        <li className="pl-4 my-2">
+        <li className="my-1">
           <Text text={value.rich_text} />
           {!!value.children && renderNestedList(block)}
         </li>
@@ -258,9 +288,29 @@ export default function Post({ page, blocks }) {
             </div>
           </div>
           <section>
-            {blocks.map((block) => (
-              <Fragment key={block.id}>{renderBlock(block)}</Fragment>
-            ))}
+            {groupBlocks(blocks).map((block) => {
+              if (block.type === "bulleted_list") {
+                return (
+                  <ul key={block.id} className="list-disc pl-6 my-5 leading-7">
+                    {block.items.map((item) => (
+                      <Fragment key={item.id}>{renderBlock(item)}</Fragment>
+                    ))}
+                  </ul>
+                );
+              }
+              if (block.type === "numbered_list") {
+                return (
+                  <ol key={block.id} className="list-decimal pl-6 my-5 leading-7">
+                    {block.items.map((item) => (
+                      <Fragment key={item.id}>{renderBlock(item)}</Fragment>
+                    ))}
+                  </ol>
+                );
+              }
+              return (
+                <Fragment key={block.id}>{renderBlock(block)}</Fragment>
+              );
+            })}
             <div className="my-8">
               <p>
                 <Link href="/">← Go home</Link>
